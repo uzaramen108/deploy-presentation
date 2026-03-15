@@ -115,9 +115,6 @@ highlighter: shiki
 
 </div>
 
-<div class="w-full flex justify-center mt-6">
-  <img src="./images/image_2.png" alt="Mesh Dependence Chart" class="w-full max-h-[160px] object-contain rounded shadow-sm" />
-</div>
 
 </div>
 </div>
@@ -166,9 +163,6 @@ $$
 
 </div>
 
-<div class="w-full flex justify-center mt-6">
-  <img src="./images/image_3.png" alt="Coordinate Transformation" class="w-full max-h-[140px] object-contain rounded shadow-sm" />
-</div>
 
 
 </div>
@@ -204,14 +198,9 @@ highlighter: shiki
 
 </div>
 
-<div class="w-full flex justify-center mt-6">
-  <img src="./images/image_3.png" alt="Coordinate Transformation" class="w-full max-h-[140px] object-contain rounded shadow-sm" />
-</div>
-
 
 </div>
 </div>
-
 
 ---
 theme: seriph
@@ -244,6 +233,8 @@ $$
 <div v-click >
 
 ### 🔹 조건 부연 설명
+<br>
+
 * **Feasible Set $K$**: 부등식 제약 조건을 만족하는 해의 집합을 의미합니다 .
 * **경계 조건**: $\partial\Omega$ (경계면)에서 $u = 0$ 이고, 장애물 위에 놓인 상태를 가정합니다 .
 * 제약 조건이 없다면 1차 변분을 통해 푸아송 방정식(Poisson equation)의 약형(Weak form)과 수학적으로 완전히 동일해집니다 .
@@ -252,9 +243,6 @@ $$
 </div>
 </div>
 
-<div v-click class="w-full flex justify-center mt-2">
-  <img src="./images/image_4.png" alt="Dirichlet Energy Minimization" class="w-full max-h-[180px] object-contain rounded shadow-sm" />
-</div>
 ---
 theme: seriph
 class: text-center
@@ -294,7 +282,7 @@ $$
 * 탄성 막($u$)은 이 장애물 표면($\phi$)을 통과할 수 없으며 이는  $u \ge \phi$ 제약으로 나타납니다.
 
 <div class="w-full flex flex-col items-center justify-center mt-6">
-  <img src="./images/image_1.png" alt="Obstacle Cross Section" class="w-full max-h-[180px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/obstacle_problem_preview.png" alt="Obstacle Cross Section" class="w-full max-h-[200px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-2">장애물 $\phi(x,y)$의 2D 단면 및 막의 접촉 형태</div>
 </div>
 
@@ -335,13 +323,8 @@ $$
 <div v-click >
 
 <div class="w-full flex flex-col items-center">
-    <div class="text-xs opacity-70 mb-1">변환 전: 하한선이 존재하는 부등식 제약 공간 ($u \ge \phi$)</div>
-    <img src="./images/image_1.png" alt="Before Legendre" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
-  </div>
-
-  <div class="w-full flex flex-col items-center">
-    <div class="text-xs opacity-70 mb-1">변환 후: 제약이 없는 무한한 실수 공간 ($\psi \in \mathbb{R}$)</div>
-    <img src="./images/image_2.png" alt="After Legendre" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+    <div class="text-xs opacity-70 mb-1">제약조건 별 르장드르 함수</div>
+    <img src="./images/screenshot1.png" alt="Before Legendre" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   </div>
 
 </div>
@@ -476,7 +459,7 @@ python3 compare_all.py -P ./meshes/disk_3.xdmf -O fine
 </div>
 
 <div class="w-full flex justify-center mt-2">
-  <img src="./images/image_4.png" alt="Dirichlet Energy Minimization" class="w-full max-h-[180px] object-contain rounded shadow-sm" />
+  <img src="./images/screenshot2.png" alt="Dirichlet Energy Minimization" class="w-full max-h-[360px] object-contain rounded shadow-sm" />
 </div>
 </div>
 
@@ -595,13 +578,13 @@ compare_all.py
 #### 🔹 솔버 호출 (PG, IPOPT, GALAHAD, SNES)
 * 각 코드의 솔버 함수를 import를 이용해 호출합니다.<br><br>
 #### 🔹 출력 구성
-* `Proximal Galerkin`: 1, 2차 라그랑주로 긱긱 출력
+* `Proximal Galerkin`: 1, 2차 라그랑주로 각각 출력
 * `Galahad`: 단독 출력
 * `IPOPT`: Hessian의 유무에 따른 두 경우 모두 출력
 * `SNES`: 단독 출력
 <div class="w-full flex flex-col items-center justify-center mt-6">
-  <img src="./images/image_1.png" alt="Obstacle Cross Section" class="w-full max-h-[180px] object-contain rounded shadow-sm border border-gray-200/50" />
-  <div class="text-xs opacity-70 mt-2">장애물 $\phi(x,y)$의 2D 단면 및 막의 접촉 형태</div>
+  <img src="./images/screenshot3.png" alt="Obstacle Cross Section" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <div class="text-xs opacity-70 mt-2">mesh 해상도에 따라 coarse/medium/fine 저장</div>
 </div>
 </div>
 
@@ -1465,9 +1448,9 @@ highlighter: shiki
 
 <div v-click>
 
-### 🔹 GALAHAD
+### 🔹 GALAHAD(1차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="GALAHAD 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/galahad_result.png" alt="GALAHAD 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">GALAHAD 솔버 실행 결과</div>
 </div>
 
@@ -1475,9 +1458,9 @@ highlighter: shiki
 
 <div v-click>
 
-### 🔹 SNES
+### 🔹 SNES(1차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="IPOPT 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/snes_result.png" alt="IPOPT 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">SNES 솔버 실행 결과</div>
 </div>
 
@@ -1500,9 +1483,9 @@ highlighter: shiki
 
 <div v-click>
 
-### 🔹 IPOPT(with hessian)
+### 🔹 IPOPT(with hessian, 1차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="GALAHAD 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/ipopt_hessian_true.png" alt="GALAHAD 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">IPOPT(with hessian) 솔버 실행 결과</div>
 </div>
 
@@ -1510,14 +1493,15 @@ highlighter: shiki
 
 <div v-click>
 
-### 🔹 IPOPT(without hessian)
+### 🔹 IPOPT(without hessian, 1차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="IPOPT 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/ipopt_hessian_false.png" alt="IPOPT 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">IPOPT(without hessian) 솔버 실행 결과</div>
 </div>
 
 </div>
 </div>
+
 ---
 theme: seriph
 class: text-center
@@ -1536,7 +1520,7 @@ highlighter: shiki
 
 ### 🔹 Proximal Galerkin(1차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="GALAHAD 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/llvp_first_result.png" alt="GALAHAD 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">Proximal Galerkin(1차) 솔버 실행 결과</div>
 </div>
 
@@ -1546,11 +1530,62 @@ highlighter: shiki
 
 ### 🔹 Proximal Galerkin(2차)
 <div class="w-full flex flex-col items-center">
-  <img src="./images/image_2.png" alt="IPOPT 결과" class="w-full max-h-[160px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/llvp_second_result.png" alt="IPOPT 결과" class="w-full max-h-[300px] object-contain rounded shadow-sm border border-gray-200/50" />
   <div class="text-xs opacity-70 mt-1">Proximal Galerkin(2차) 솔버 실행 결과</div>
 </div>
 
 </div>
+</div>
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 8-4. 고차 라그랑주 요소와 노드 문제
+
+<div class="text-xl opacity-80 mb-6">
+  차수가 높아질수록 다른 솔버들이 힘든 이유
+</div>
+
+<div grid="~ cols-2 gap-8" class="text-left">
+
+<div v-click>
+
+### 🔹 라그랑주 차수별 노드 구조
+<div class="mt-2 text-sm opacity-80">
+P2에서는 변 중간점도 노드 → 노드 사이 구간에서 고차 다항식의 진동(Oscillation) 발생 가능
+
+</div>
+<div class="w-full flex flex-col gap-3 items-center mt-4">
+  <img src="./images/lagrange1.png" class="w-full max-h-[130px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <img src="./images/lagrange2.png" class="w-full max-h-[130px] object-contain rounded shadow-sm border border-gray-200/50" />
+  <div class="text-xs opacity-70">fenics workshop</div>
+</div>
+
+</div>
+
+<div v-click>
+
+### 🔹 다른 솔버들의 수렴 Issue
+
+<div class="mt-2 text-sm opacity-80">
+<div class="mt-4 text-sm">
+
+| Method | p=1, h | p=1, h/2 | p=1, h/4 | p=2, h | p=2, h/2 | p=2, h/4 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Proximal Galerkin** | **15** | **13** | **12** | **15** | **16** | **12** |
+| Active Set | 11 | 16 | 25 | — | — | — |
+| Trust-Region | 6 | 12 | 19 | — | — | — |
+| Interior Point (IP) | 9 | 9 | 8 | — | — | — |
+| IP without Hessian | 90 | 260 | 500 | — | — | — |
+
+</div>
+
+</div>
+
+</div>
+
 </div>
 
 ---
@@ -1559,30 +1594,107 @@ class: text-center
 highlighter: shiki
 ---
 
-# 9. 향후 발전 방향 (Develop Direction)
-<div class="text-xl opacity-80 mb-6">멤브레인을 이용한 고체 슬러리/액체 분리 모델링</div>
+# 8-5. PG만 고차 요소를 쉽게 다룰 수 있는 이유
+
+<div class="text-xl opacity-80 mb-6">
+  지수 변환이 차수에 무관하게 제약을 보장
+</div>
+
+<div grid="~ cols-2 gap-8" class="text-left">
+
+<div v-click>
+
+### 🔹 PG의 구조적 차이
+다른 솔버는 **이산화 이후** 제약을 처리하지만, PG는 **이산화 이전** 연속 공간에서 제약을 해결합니다.
+
+$$u = \phi + e^\psi > \phi \quad \text{(항상 성립)}$$
+
+<div class="mt-2 text-sm opacity-80">
+
+- $\psi$가 P1이든 P2든, $e^\psi > 0$이므로 **모든 점에서 자동으로** $u > \phi$ 만족
+
+</div>
+
+<div class="mt-4 text-sm bg-gray-800 text-gray-100 rounded-md p-4 font-mono leading-6">
+  <div class="text-red-400">다른 솔버:</div>
+  <div>연속 문제 → 이산화(P1/P2) → 제약 처리</div>
+  <div class="text-yellow-300 text-xs ml-24">↑ 차수가 높아지면 문제 발생</div>
+  <div class="mt-2 text-green-400">PG (LVPP):</div>
+  <div>연속 문제 → 잠재 변수 변환 → 이산화 → 풀기</div>
+  <div class="text-yellow-300 text-xs ml-16">↑ 제약이 이미 해결 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↑ 차수 무관</div>
+</div>
+
+</div>
+
+<div v-click>
+
+### 🔹 메시·차수 독립적 수렴
+
+<div class="mt-2 text-sm" style='background-color: rgb(210, 215, 245)'>
+
+| Mesh size $h$ | $2^{-1}$ | $2^{-2}$ | $2^{-3}$ | $2^{-4}$ | $2^{-5}$ | $2^{-6}$ |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Finite Difference** | **10** | **15** | **13** | **15** | **16** | **16** |
+
+</div>
+<div class="mt-2 text-sm" style='background-color: rgb(210, 235, 225)'>
+
+| Degree $p$ (FEM) | 8 | 16 | 24 | 32 | 40 | 48 |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Spectral Method** | **16** | **17** | **16** | **16** | **16** | **15** |
+
+</div><br>
+
+### 🔹 핵심 요약
+
+<div class="mt-2 text-sm opacity-80">
+
+- 타 솔버: 노드마다 제약을 **직접 체크** → 차수가 오를수록 한계
+- PG: 역치환 $u = \phi + e^\psi$ 구조 자체가 **제약을 내재화** → 차수 무관
+
+</div>
+
+</div>
+
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 9. 시뮬레이션 발전 방향 (Develop Direction)
+<div class="text-xl opacity-80 mb-6">화공생명공학 도메인으로의 LVPP 알고리즘 응용</div>
 
 <div class="text-sm">
-<div grid="~ cols-2 gap-4" class="mt-4 mb-4">
-<div>
+<div grid="~ cols-2 gap-8" class="text-left mt-4 mb-4">
+<div v-click>
 
-### 🔹 공학적 응용 프레임워크 확장
-* 본 알고리즘이 적용된 고체 접촉(Membrane-Obstacle) 모델을 응용하여 **화공생명공학의 분리 공정 모델링**으로 발전시킬 수 있습니다.
-* 여과막(Membrane)을 통과하는 액체와 통과하지 못하는 고체 슬러리(Slurry) 혼합물 분리 시스템에 적용합니다.
+### 🔹 응용 1: 고체 슬러리/액체 분리 공정
+<br>
+
+* **개념**: 멤브레인을 통해 액체 흐름을 투과시키고 고체 슬러리(Slurry)를 걸러내는 여과(Filtration) 현상 모사.
+* **LVPP 적용**: 표면에 불균일하게 축적된 고체 슬러리 층(Cake layer)을 막이 통과할 수 없는 '장애물($\phi$)' 조건으로 설정합니다.
+* **예상 결과**: 
+  - 슬러리가 없는 부분은 plug flow를 따라 압력 분포가 나타날 것이며 슬러리가 있는 부분은 비교적 균일한 압력 분포를 띌 것으로 예상.
+  - 유체 압력에 의해 멤브레인이 변형될 때 발생하는 국소적 스트레스 및 데미지(파열 위험군)를 정확히 예측.
+  - LVPP의 메시 독립성 덕분에, 슬러리가 쌓인 복잡한 형상 위에서도 진동이나 발산(Error) 없이 안정적인 접촉 해석 도출.
 
 </div>
-<div>
+<div v-click>
 
-### 🔹 점별 값 제약(Value Constraint)의 활용
-* 고체 입자가 여과막을 뚫지 못하고 쌓이면서 Cake layer를 형성하는 물리적 현상을 $u \ge \phi$ (입자 위치 $\ge$ 여과막 표면) 형태의 제약으로 모사합니다.
-* 이를 FEniCSx 기반 LVPP 솔버로 계산하면, 격자 의존성 없이 압력 분포 및 막의 미세 변형을 대규모로 병렬 처리할 수 있을 것으로 기대됩니다.
+### 🔹 응용 2: 정상상태 흐름 내 동적 On/Off 밸브 제어
+<br>
+
+* **개념**: 관내 정상상태(Steady-state) 유동 중 밸브가 갑자기 닫혀 유로를 차단하는 동적 On/Off 제어 상황 모사.
+* **LVPP 적용**: On/Off 밸브의 실제 물리적 형상을 '장애물($\phi$)'로 설정. 시간 의존성 유동 방정식에 $u \ge \phi$ 제약이 갑자기 활성화되는 순간을 해석합니다.
+* **예상 결과**:
+  - 밸브 폐쇄로 인한 유로 차단 시 발생하는 급격한 액체 유동 변화 및 병목 구간의 압력 분포(수격 작용 등) 확인.
+  - 갑작스러운 제약 조건 발생 시 기존 솔버는 발산하기 쉽지만, LVPP의 매끄러운 안장점 구조 변환을 통해 수치적 에러 없이 과도응답(Transient response)을 안정적으로 계산.
 
 </div>
 </div>
-</div>
-
-<div class="w-full flex justify-center mt-2">
-  <img src="./images/image_1.png" alt="Slurry Separation Model" class="w-full max-h-[220px] object-contain rounded shadow-sm" />
 </div>
 
 ---
