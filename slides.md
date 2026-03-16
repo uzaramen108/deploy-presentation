@@ -75,10 +75,7 @@ highlighter: shiki
 
 </div>
 </div>
-</div>---
-theme: seriph
-class: text-center
-highlighter: shiki
+</div>
 
 ---
 theme: seriph
@@ -138,7 +135,7 @@ highlighter: shiki
 
 <div grid="~ cols-2 gap-8" class="text-left">
 
-<div>
+<div v-click>
 
 ### 1. 매끄러운 좌표 변환
 제약 조건 집합 $K$를 직접 다루는 대신, 제한이 없는 무한 차원의 잠재 함수 공간(Latent function space) $\psi$를 도입합니다.
@@ -182,7 +179,7 @@ highlighter: shiki
 # 4. LVPP의 주요 특징
 <div grid="~ cols-2 gap-8" class="text-left">
 
-<div class="mt-4 text-sm opacity-80">
+<div class="mt-4 text-sm opacity-80" v-click>
 
 ### 👍 장점 (Pros)
 * **무한 차원 정식화**: 격자 크기(Mesh size)나 이산화 차수(Polynomial order)에 관계없이 성능이 유지되는 메시 및 차수 독립성을 가집니다.
