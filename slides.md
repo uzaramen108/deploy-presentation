@@ -1,6 +1,6 @@
 ---
 theme: seriph
-title: LVPP 알고리즘을 활용한 장애물 문제 분석
+title: LVPP 알고리즘을 활용한 장애물 문제 분석!
 info: |
   ## Proximal Galerkin & Obstacle Problem
   3월 17일 발표 자료
