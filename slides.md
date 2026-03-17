@@ -22,7 +22,7 @@ duration: 20min
 <div class="relative z-10 flex flex-col items-center justify-center h-full" color="black">
 
 # LVPP 알고리즘을 활용한
-# 장애물 문제(Obstacle Problem) 분석!
+# 장애물 문제(Obstacle Problem) 분석!!
 
 <div class="text-xl opacity-80 mb-8 mt-4">
   Proximal Galerkin 기반의 구조 보존형 유한요소법
