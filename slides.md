@@ -71,7 +71,9 @@ highlighter: shiki
 <div class="mt-4 text-sm opacity-80">
 
 - **한계** : 최적성 조건이 연속 차원에서 충분히 매끄럽지 않음
-- **해결** : 이를 효율적으로 풀기 위해 **LVPP (Latent Variable Proximal Point)** 프레임워크 도입
+<div class="w-full flex flex-col items-center">
+  <img src="./images/Figure_1.png" alt="GALAHAD 결과" class="w-full max-h-[230px] object-contain rounded shadow-sm border border-gray-200/50" />
+</div>
 
 </div>
 </div>
@@ -91,7 +93,7 @@ highlighter: shiki
 
 <div grid="~ cols-2 gap-8" class="text-left">
 
-<div v-click>
+<div v-click="1">
 
 ### 1. 메시 의존성 (Mesh-dependence)
 부등식 제약 문제는 연속 차원에서 충분히 매끄럽지 않습니다. 
@@ -103,6 +105,9 @@ highlighter: shiki
 
 </div>
 
+</div>
+<div class="w-full absolute  left-50 w-full flex flex-col items-center"" v-click="[1,2]">
+  <img src="./images/Figure_2.png" alt="GALAHAD 결과" class="w-full max-h-[300px] object-contain rounded" />
 </div>
 
 <div v-click>
