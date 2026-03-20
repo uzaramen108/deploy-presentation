@@ -167,30 +167,74 @@ Brinkman을 적용한 코드에서는 $R_m = 50$을 임의로 설정했습니다
 
 ### 4.1 물리적으로 기대되는 현상
 
-반투막을 유체가 통과할 때, Darcy의 법칙에 의해 막 전후로 압력 강하(Pressure Jump)가 반드시 발생해야 합니다:
+반투막을 유체가 통과할 때, Darcy의 법칙에 의해 막 전후로 **압력 강하(Pressure Jump)**가 반드시 발생해야 합니다:
 
-$$\Delta p = p^- - p^+ = \frac{\mu}{\kappa}(u\cdot n)\cdot d_{mem}$$
+$$\Delta p = p^- - p^+ = \frac{\mu}{\kappa}(u \cdot n) \cdot d_{mem}$$
 
 - 막 전(상류): 압력 $p^-$ (높음)
 - 막 후(하류): 압력 $p^+$ (낮음)
 
-### 4.2 ParaView 시각화 결과
+### 4.2 초기 Brinkman 코드의 문제점
 
-Brinkman 방식으로 시뮬레이션한 결과를 ParaView로 확인하면, **막 전후 압력 분포가 거의 동일**하게 나타납니다. 압력이 막을 기점으로 불연속적으로 떨어지는 현상(압력 점프 $[\![p]\!]$)이 관찰되지 않습니다.
+초기 구현에서는 아래 두 가지 설계 오류로 인해 압력 점프가 나타나지 않았습니다.
 
-![Brinkman velocity](./video/Brinkman-pressure.gif)
+**① 저항 계수가 물리량이 아닌 임의의 상수**
 
-### 4.3 수학적 원인
+$$R_m = 50 \quad \leftarrow \text{임의 설정, } \frac{\mu}{\kappa} \text{와 무관}$$
 
-Brinkman 항은 부피 적분(Volume integral)으로 추가됩니다:
+**② 막 두께가 비물리적으로 두꺼움**
 
-$$\int_{\Omega} \frac{\mu}{\kappa}\cdot\mathbf{1}_{\Gamma_m^\delta}\cdot u\cdot v\;dx \qquad \leftarrow \text{3D 영역 전체에 분산}$$
+$$|x - x_m| < 0.2\,\text{m} \quad \leftarrow \text{두께 0.4m (파이프 반지름의 80\%)}$$
 
-그러나 실제 막에서의 압력 점프는 표면 적분(Surface integral)이어야 합니다:
+압력 포아송 방정식의 우변 $\nabla \cdot u^*$가 막 구간 전체에 완만하게 분산되어, 막을 기점으로 한 불연속적 압력 점프가 발생하지 않았습니다.
 
-$$\int_{\Gamma_m} [\![p]\!]\cdot v\cdot n\;dS \qquad \leftarrow \text{2D 경계면에 집중}$$
+![초기 Brinkman 압력 분포](./video/Brinkman-pressure.gif)
 
-> **결론**: Brinkman은 막 근처에서 유체를 느리게 만드는 효과는 있지만, 막 양면의 압력 불연속(Pressure Jump)을 물리적으로 올바르게 표현하지 못합니다.
+### 4.3 개선된 Brinkman 구현 (tanh 집중화, 윤현준)
+
+막 저항을 **물리량 기반 계수**와 **수학적으로 얇은 분포**로 수정하면 압력 점프가 재현됩니다.
+
+**① 저항 계수를 투과율 기반 물리량으로 설정**
+
+$$\alpha_{max} = \frac{\mu}{\kappa}$$
+
+**② `tanh` 함수로 막 위치에 집중된 저항 분포**
+
+$$\alpha(x) = \frac{\mu}{\kappa} \cdot \underbrace{\frac{1}{2}\left(1 + \tanh\frac{t_{half} - |x - x_m|}{\varepsilon}\right)}_{H(x)}$$
+
+- $t_{half}$: 막의 반폭 (~0.02m, 초기 0.4m 대비 20배 얇음)
+- $\varepsilon$: 전환 구간 폭
+- $H(x)$: 막 위치에서만 1, 그 외에서 0으로 수렴하는 계단 함수
+```
+초기 Brinkman:               개선된 Brinkman:
+
+α                            α
+│                            │    █
+50──────────────             50   ███
+   ████████████              │   █████
+───────────────              ───────────
+   ←  0.4m  →                   ←0.04m→
+   두꺼운 저항 영역               얇고 집중된 저항
+```
+
+**③ 압력 점프가 발생하는 이유**
+
+저항이 얇게 집중되면 $\nabla \cdot u^*$가 막 위치에서 급격히 변하고, 압력 포아송 방정식이 이를 반영하여 막 전후에 서로 다른 압력을 계산합니다:
+
+$$\nabla^2 \phi = \frac{\rho}{\Delta t} \underbrace{\nabla \cdot u^*}_{\text{막 위치에서 급격히 변함}} \quad \Rightarrow \quad p^- \neq p^+$$
+
+### 4.4 남은 한계
+
+개선된 Brinkman도 완전한 Darcy 표면항은 아닙니다.
+
+| | 초기 Brinkman | 개선된 Brinkman | Darcy 표면항 |
+|---|:---:|:---:|:---:|
+| 압력 점프 재현 | ❌ | △ | ✅ |
+| 저항 계수 물리 기반 | ❌ | ✅ | ✅ |
+| 적분 형태 | 부피 $dx$ | 부피 $dx$ | 표면 $dS$ |
+| 압력 점프 정량적 정확도 | ❌ | △ | ✅ |
+
+> **결론**: 저항을 물리량 기반 계수와 얇은 `tanh` 분포로 집중시키면 압력 점프를 **간접적으로 재현**할 수 있습니다. 다만 $[\![p]\!] = (\mu/\kappa)(u \cdot n)$을 수학적으로 강제하는 Darcy 표면항과 달리, 정량적 정확도는 막 두께 $t_{half}$에 의존합니다.
 
 ---
 
