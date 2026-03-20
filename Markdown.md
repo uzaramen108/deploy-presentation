@@ -158,7 +158,7 @@ $\mathbf{1}_{\Gamma_m^\delta}$는 막 근방 영역에서만 1, 나머지에서 
 |---|---|
 | 저항 $\to 0$ (자유 통과) | 저항 $\to \infty$ (완전 차단) |
 
-초기 구현에서는 $R_m = 50$을 임의로 설정했으나, 이후 물리량 기반으로 $R_m = \mu/\kappa$로 수정하였습니다.
+Brinkman을 적용한 코드에서는 $R_m = 50$을 임의로 설정했습니다.
 
 ![Brinkman velocity](./video/Brinkman-velocity.gif)
 
@@ -205,7 +205,7 @@ $$[\![p]\!] = \frac{\mu}{\kappa}(u\cdot n), \qquad [\![p]\!] = p^- - p^+$$
 
 이를 NS 운동량 방정식 약형에 **표면 적분항**으로 추가합니다:
 
-$$F_1 \;\mathrel{+}=\; \int_{\Gamma_m} \frac{\mu}{\kappa}\;\text{avg}(u)\cdot n^+\;\text{avg}(v)\cdot n^+\;dS$$
+$$F_1 += \int_{\Gamma_m} \frac{\mu}{\kappa} \langle u \rangle \cdot n^{+} \, \langle v \rangle \cdot n^{+} \, dS$$
 
 - `avg`: 막 양쪽 셀의 평균값 (수치 안정성 확보)
 - $n^+$: 막 한쪽 방향의 법선 벡터
