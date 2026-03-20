@@ -1,97 +1,418 @@
-# 나비에-스토크스 방정식 (IPCS 기법) 약형 변환 정리
-
-비압축성 유체의 지배 방정식인 나비에-스토크스 방정식을 컴퓨터(FEniCSx)로 풀기 위해 IPCS 분할법으로 이산화하고 약형(Weak Form)으로 변환하는 과정입니다.
-
-## 1. 지배 방정식 (Navier-Stokes)
-유체의 운동량 보존과 비압축성을 나타냅니다.
-
-* **운동량 보존 및 연속 방정식:**
-$$\rho \left(\frac{\partial u}{\partial t} + u \cdot \nabla u\right) = \nabla \cdot \sigma(u, p) + f$$
-$$\nabla \cdot u = 0$$
-* **응력 텐서 (Stress Tensor):**
-$$\sigma(u, p) = 2\mu\epsilon(u) - pI$$
-$$\epsilon(u) = \frac{1}{2}(\nabla u + (\nabla u)^T)$$
-
+---
+theme: seriph
+class: text-center
+highlighter: shiki
 ---
 
-## 2. Step 1: 임시 속도 $u^*$ 구하기
-시간 이산화와 대류항 선형화를 거쳐 임시 속도를 구하는 단계입니다.
-
-* **시간 이산화 (Crank-Nicolson):** 시간 미분 $\frac{\partial u}{\partial t}$를 $\frac{u^*-u^n}{\Delta t}$로 쪼개고, 점성항에 현재와 과거의 평균을 적용합니다.
-* **대류항 선형화:** 비선형항 $u \cdot \nabla u$를 풀기 위해, 앞의 $u$는 과거 데이터를 이용한 Adams-Bashforth 외삽($u_{AB}$)으로, 뒤의 $\nabla u$는 Crank-Nicolson 미분($\nabla u_{CN}$)으로 처리합니다.
-* **부분 적분 (약형 변환):** 양변에 테스트 함수 $v$를 곱하고 적분하여 2계 미분을 1계 미분으로 낮춥니다.
-
-**최종 수식 ($F_1=0$):**
-$$F_1 = \int \rho \frac{u^* - u^n}{\Delta t} \cdot v + \int \rho (u_{AB} \cdot \nabla u_{CN}) \cdot v + \int \mu \nabla u_{CN} : \nabla v - \int p^n (\nabla \cdot v) + \int f \cdot v = 0$$
+# 유체-막 상호작용 시뮬레이션
+<div class="text-xl opacity-80 mb-8">
+  Navier-Stokes → Brinkman → Darcy+ALE 로의 발전
+</div>
 
 ---
-
-## 3. 다공성 막 투과 모델링 (Darcy's Law 적용)
-
-얇은 반투막(Membrane)을 통과하는 유동은 수만 개의 미세 기공을 3D 메쉬로 직접 묘사하는 것이 불가능합니다. 따라서 막을 2D 내부 경계면($\Gamma_m$)으로 정의하고, **Darcy의 법칙(Darcy's Law)**을 수학적인 표면 저항(Surface Resistance)으로 변환하여 적용합니다.
-
-### 4. 물리적 배경 (Darcy 점프 조건)
-다공성 매질을 통과하는 유속은 막 양단의 압력차($[[p]]$)에 비례하고 유체의 점성에 반비례합니다. 이를 막 표면에 수직으로 통과하는 법선 속도($u \cdot n$)에 대한 저항력으로 정리하면 다음과 같습니다.
-
-$$[[p]] = \frac{\mu}{\kappa} (u \cdot n)$$
-- $\kappa$: 막의 투과율 (Permeability)
-- $\mu$: 유체의 점성 (Viscosity)
-- $[[p]]$: 막을 기점으로 한 압력 강하 ($p^- - p^+$)
-
-### 5. 약형 (Weak Form) 변환
-이 압력 강하 조건은 유체가 막을 통과할 때 속도에 비례하여 받는 '마찰 저항력(Traction force)'으로 작용합니다. 따라서 Step 1의 운동량 방정식(임시 속도 구하기) 약형에서, 막 표면($\Gamma_m$)에 대한 면적분 항으로 추가됩니다.
-
-양변에 테스트 함수 $v$를 내적하고 적분하면 다음과 같은 표면 저항항이 도출됩니다.
-$$\int_{\Gamma_m} \frac{\mu}{\kappa} (u \cdot n) (v \cdot n) dS$$
-
-### 6. FEniCSx 코드 구현
-내부 경계면(Interior facet)에서는 유체가 통과할 때 면을 공유하는 양쪽 셀(Cell)의 물리량이 충돌할 수 있습니다. 수치적 안정성을 위해 속도의 평균값(`avg`)과 한쪽 방향의 법선 벡터(`n("+")`)를 취하여 계산합니다.
-
+theme: seriph
+class: text-center
+highlighter: shiki
 ---
 
-## 5. 움직이는 격자 기법 (ALE: Arbitrary Lagrangian-Eulerian)
+# 1. 시뮬레이션 개요
+<div class="text-xl opacity-80 mb-6">나비에-스토크스로 막 근처 속도 및 압력 계산</div>
 
-유체-구조 연성(FSI) 문제에서 반투막과 같은 고체 구조물이 유압에 의해 변형되면, 유체가 흐르는 공간 자체의 형태가 변하게 됩니다. 이를 해결하기 위해 **ALE(임의 라그랑지안-오일러리안)** 기법을 도입합니다.
+<div grid="~ cols-2 gap-8" class="text-left">
+
+<div v-click>
+
+### 🔹 물리적 설정
+원형 단면의 3D 파이프 내부를 유체가 흐르다가 중간에 위치한 **반투막(semi-permeable membrane)**과 만나는 문제입니다.
+
+<div class="mt-2 text-sm opacity-80">
+
+- 유체 도메인 $\Omega_f$: 3D 원형 관로 (길이 $L=5$m, 반지름 $R=0.5$m)
+- 막 위치: $x_m = 3.75$m (파이프 중간)
+- 입구 속도: Poiseuille 포물선 프로파일 + 사인파 시간 변화
+
+$$u_{inlet}(r,t) = u_{max} \sin\!\left(\frac{\pi t}{2T}\right)\left(1 - \frac{r^2}{R^2}\right)$$
+
+</div>
+
+</div>
+
+<div v-click>
+
+### 🔹 계산 목표
+나비에-스토크스 방정식으로 매 타임스텝마다 다음을 계산합니다.
+
+<div class="mt-2 text-sm opacity-80">
+
+- **속도장** $u(x,t)$: 막 전후 유체의 흐름 패턴
+- **압력장** $p(x,t)$: 막 전후 압력 분포
+- **막 변위** $w(x,t)$: 압력 하중에 의한 막의 휨
+
+</div>
+
+### 🔹 수치 기법 선택: IPCS 분할법
+나비에-스토크스를 직접 풀면 속도-압력 연성이 발생해 계산 비용이 극도로 높아집니다. 이를 **3단계로 분리**하여 푸는 IPCS(Incremental Pressure Correction Scheme)를 사용합니다.
+
+<div class="mt-2 text-sm opacity-80">
+
+$$\text{Step 1: }u^* \rightarrow \text{Step 2: }p^{n+1} \rightarrow \text{Step 3: }u^{n+1}$$
+
+</div>
+
+</div>
+</div>
 
 ---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
 
-### 1. 물리적 배경: 왜 ALE를 쓰는가?
-유체역학과 고체역학은 격자(Mesh)를 바라보는 관점이 다릅니다.
-* **Eulerian (오일러 관점, 유체):** 격자는 공간에 고정되어 있고, 유체가 그 격자를 통과하여 지나갑니다. (다리 위에서 강물을 바라보는 관점)
-* **Lagrangian (라그랑주 관점, 고체):** 격자가 물질(입자)과 함께 움직입니다. 고체의 변형을 추적하기 좋지만, 유체에 적용하면 격자가 심하게 꼬여서(Tangling) 계산이 파탄 납니다.
-* **ALE (절충형):** 구조물의 경계면에서는 격자가 고체와 함께 움직이고(Lagrangian), 유체 내부에서는 격자가 꼬이지 않도록 부드럽게 재배치되며(Eulerian), 그 사이의 공간은 '임의의 속도'로 움직입니다.
+# 2-1. 나비에-스토크스 약형 유도 (Step 1)
+<div class="text-xl opacity-80 mb-6">임시 속도 $u^*$ 구하기 — 강형에서 약형으로</div>
 
-### 2. 수식 변환: 움직이는 메쉬에서의 나비에-스토크스
-격자 자체가 $w_{mesh}$라는 속도로 움직이고 있기 때문에, 유체가 느끼는 '상대적인 대류 속도'가 달라집니다. 따라서 기존 나비에-스토크스 방정식의 대류항(Convection term)이 다음과 같이 수정됩니다.
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 ① 강형 (Strong Form)
+비압축성 나비에-스토크스 운동량 방정식:
+
+$$\rho \frac{\partial u}{\partial t} + \rho(u \cdot \nabla u) = \nabla \cdot \sigma(u,p) + f$$
+
+$$\sigma(u,p) = 2\mu\epsilon(u) - pI, \quad \epsilon(u) = \frac{1}{2}(\nabla u + (\nabla u)^T)$$
+
+### 🔹 ② 시간 이산화 (Crank-Nicolson)
+시간 미분을 차분으로 치환하고, 점성항에 현재·과거 평균 적용:
+
+$$\rho\frac{u^* - u^n}{\Delta t} + \rho(u_{AB}\cdot\nabla u_{CN}) - \nabla\cdot\left(2\mu\epsilon\!\left(\frac{u^*+u^n}{2}\right)\right) + \nabla p^n = f$$
+
+- $u_{AB} = \frac{3}{2}u^n - \frac{1}{2}u^{n-1}$ : Adams-Bashforth 외삽 (대류 선형화)
+- $u_{CN} = \frac{u^*+u^n}{2}$ : Crank-Nicolson 평균
+
+</div>
+
+<div v-click>
+
+### 🔹 ③ 약형 변환 (Weak Form)
+테스트 함수 $v$를 곱하고 $\Omega$에서 적분, **부분 적분**으로 미분 차수를 낮춤:
+
+$$\int_\Omega \nabla\cdot(2\mu\epsilon)\cdot v \;\xrightarrow{\text{부분 적분}}\; \int_\Omega 2\mu\epsilon(u_{CN}):\epsilon(v) - \oint_{\partial\Omega}(\cdots)$$
+
+$$\int_\Omega \nabla p \cdot v \;\xrightarrow{\text{부분 적분}}\; -\int_\Omega p(\nabla\cdot v) + \oint_{\partial\Omega}(\cdots)$$
+
+### 🔹 ④ 최종 약형 $F_1 = 0$
+
+$$\underbrace{\int_\Omega \rho\frac{u^*-u^n}{\Delta t}\cdot v}_{\text{시간 미분}} + \underbrace{\int_\Omega \rho(u_{AB}\cdot\nabla u_{CN})\cdot v}_{\text{대류항}} $$
+$$+ \underbrace{\int_\Omega 2\mu\epsilon(u_{CN}):\epsilon(v)}_{\text{점성항}} - \underbrace{\int_\Omega p^n(\nabla\cdot v)}_{\text{압력항}} + \underbrace{\int_\Omega f\cdot v}_{\text{외력}} = 0$$
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 2-2. 나비에-스토크스 약형 유도 (Step 2 & 3)
+<div class="text-xl opacity-80 mb-6">압력 보정 및 최종 속도 업데이트</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 Step 2: 압력 보정
+진짜 속도 $u^{n+1}$과 임시 속도 $u^*$의 차이는 압력 증분 $\phi = p^{n+1}-p^n$에서 발생합니다:
+
+$$\rho\frac{u^{n+1}-u^*}{\Delta t} = -\nabla\phi$$
+
+양변에 발산($\nabla\cdot$)을 취하고 $\nabla\cdot u^{n+1}=0$ 대입:
+
+$$\nabla^2\phi = \frac{\rho}{\Delta t}\nabla\cdot u^*$$
+
+테스트 함수 $q$ 곱하고 부분 적분하면 최종 **압력 포아송 약형**:
+
+$$\int_\Omega \nabla\phi\cdot\nabla q = -\int_\Omega \frac{\rho}{\Delta t}(\nabla\cdot u^*)q$$
+
+</div>
+
+<div v-click>
+
+### 🔹 Step 3: 속도 보정 (Velocity Projection)
+Step 2의 결과로 최종 속도 보정:
+
+$$u^{n+1} = u^* - \frac{\Delta t}{\rho}\nabla\phi$$
+
+테스트 함수 $v$와 $\rho$를 곱하여 약형으로:
+
+$$\int_\Omega \rho\, u^{n+1}\cdot v = \int_\Omega \rho\, u^*\cdot v - \int_\Omega \Delta t\,\nabla\phi\cdot v$$
+
+이 단계를 거친 $u^{n+1}$은 **비압축성 조건 $\nabla\cdot u = 0$을 정확히 만족**합니다.
+
+### 🔹 IPCS 전체 흐름 요약
+
+$$u^* \xrightarrow{\text{Step 2}} \phi \xrightarrow{\text{Step 3}} u^{n+1}, \; p^{n+1}$$
+
+$$p^{n+1} = p^n + \phi$$
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 3. 막 투과 모델: Brinkman 저항항
+<div class="text-xl opacity-80 mb-6">막을 부피 저항항으로 근사하는 방법</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 Brinkman 방정식
+다공성 매질 내부에서의 유동을 기술하는 방정식입니다. 나비에-스토크스에 **부피 저항항** $\frac{\mu}{\kappa}u$를 추가한 형태입니다:
+
+$$\rho\frac{\partial u}{\partial t} + \rho(u\cdot\nabla u) = -\nabla p + \mu\nabla^2 u - \underbrace{\frac{\mu}{\kappa}u}_{\text{Brinkman 저항}}$$
+
+- $\kappa$: 투과율 (Permeability), 작을수록 막기 어려움
+- $\frac{\mu}{\kappa}$: 물리적 저항 계수
+
+### 🔹 코드에서의 적용 방식
+막 위치($|x - x_m| < \delta$)에서만 저항이 활성화되는 **conditional 함수**로 구현합니다:
+
+$$F_1 \mathrel{+}= \int_\Omega \frac{\mu}{\kappa}\cdot\mathbf{1}_{\Gamma_m^\delta}\cdot u\cdot v\;dx$$
+
+이때 $\mathbf{1}_{\Gamma_m^\delta}$는 막 근방 영역에서만 1, 나머지에서 0인 지시함수입니다.
+
+</div>
+
+<div v-click>
+
+### 🔹 Brinkman 방식의 장점
+
+<div class="mt-2 opacity-80">
+
+- **구현 단순**: 기존 NS 약형에 한 항만 추가
+- **안정적**: 단일 메시, 별도 경계면 불필요
+- **빠른 결과**: 행렬 구조 변화 없음
+
+</div>
+
+### 🔹 물리적 해석
+저항 계수 $R_m = \mu/\kappa$를 조절함으로써:
+
+| $\kappa \to \infty$ | $\kappa \to 0$ |
+|---|---|
+| 저항 $\to 0$ (자유 통과) | 저항 $\to \infty$ (완전 차단) |
+
+**초기 코드**에서는 $R_m = 50$을 임의로 설정했습니다. 이후 물리량 기반으로 $R_m = \mu/\kappa$로 수정하였습니다.
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 4. Brinkman 방식의 수학적 한계
+<div class="text-xl opacity-80 mb-6">압력 강하가 나타나지 않는 이유</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 물리적으로 기대되는 현상
+반투막을 유체가 통과할 때, **Darcy의 법칙**에 의해 막 전후로 압력 강하가 반드시 발생해야 합니다:
+
+$$\Delta p = p^- - p^+ = \frac{\mu}{\kappa}(u\cdot n)\cdot d_{mem}$$
+
+- 막 전(상류): 압력 $p^-$ (높음)
+- 막 후(하류): 압력 $p^+$ (낮음)
+- 두 값의 차이가 막을 통과하는 유량을 결정
+
+### 🔹 ParaView 시각화 결과
+
+실제로 Brinkman 방식으로 시뮬레이션한 결과를 ParaView로 확인하면:
+
+<div class="mt-2 p-3 bg-red-900/20 rounded border border-red-500/30">
+
+❌ **막 전후 압력 분포가 거의 동일**하게 나타납니다. 압력이 막을 기점으로 불연속적으로 떨어지는 현상(압력 점프 $[\![p]\!]$)이 관찰되지 않습니다.
+
+</div>
+
+</div>
+
+<div v-click>
+
+### 🔹 수학적 원인 분석
+
+Brinkman 항은 **부피 적분(Volume integral)**으로 추가됩니다:
+
+$$\int_{\Omega} \frac{\mu}{\kappa}\cdot\mathbf{1}_{\Gamma_m^\delta}\cdot u\cdot v\;dx \quad \leftarrow \text{3D 영역 전체에 분산}$$
+
+그러나 실제 막에서의 압력 점프는 **표면 적분(Surface integral)**이어야 합니다:
+
+$$\int_{\Gamma_m} [\![p]\!]\cdot v\cdot n\;dS \quad \leftarrow \text{2D 경계면에 집중}$$
+
+<div class="mt-3 p-3 bg-yellow-900/20 rounded border border-yellow-500/30">
+
+⚠️ 결론: Brinkman은 "막 근처에서 유체를 느리게 만드는" 효과는 있지만, **막 양면의 압력 불연속(Pressure jump)을 물리적으로 올바르게 표현하지 못합니다.** 이는 근본적인 수학적 한계입니다.
+
+</div>
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 5. 올바른 해법: Navier-Stokes + Darcy
+<div class="text-xl opacity-80 mb-6">표면 저항항과 ALE — 수학적으로 엄밀한 접근</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 Darcy 점프 조건 (Surface Resistance)
+막을 3D 부피가 아닌 **2D 내부 경계면** $\Gamma_m$으로 정의하면, 막 통과 유동을 Darcy 법칙으로 정확히 기술할 수 있습니다:
+
+$$[\![p]\!] = \frac{\mu}{\kappa}(u\cdot n), \quad [\![p]\!] = p^- - p^+$$
+
+이를 NS 운동량 방정식 약형에 **표면 적분항**으로 추가합니다:
+
+$$F_1 \mathrel{+}= \underbrace{\int_{\Gamma_m} \frac{\mu}{\kappa}\,\text{avg}(u)\cdot n^+\;\text{avg}(v)\cdot n^+\;dS}_{\text{Darcy 표면 저항 (물리적으로 올바름)}}$$
+
+- `avg`: 막 양쪽 셀의 평균값 (수치 안정성)
+- $n^+$: 막 한쪽 방향의 법선 벡터
+- 계수 $\mu/\kappa$: 투과율에서 유도된 물리량
+
+</div>
+
+<div v-click>
+
+### 🔹 Brinkman vs Darcy 비교
+
+| | Brinkman | Darcy (표면항) |
+|---|---|---|
+| 적분 형태 | 부피 $dx$ | 표면 $dS$ |
+| 압력 점프 | ❌ 표현 불가 | ✅ 자동 표현 |
+| 수학적 근거 | 근사 | 엄밀 |
+| 구현 난이도 | 낮음 | 높음 |
+
+### 🔹 그러나 Darcy만으로는 부족합니다
+막이 압력을 받아 **변형(변위)**되면, 유체 도메인 $\Omega_f(t)$ 자체가 시간에 따라 변합니다. 고정된 메시 위에서 NS를 풀면 변형된 형상을 인식하지 못합니다.
+
+$$\Rightarrow \text{움직이는 경계를 다루는 } \textbf{ALE 기법} \text{이 필요합니다.}$$
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 6-1. ALE 기법: 왜 필요한가?
+<div class="text-xl opacity-80 mb-6">Arbitrary Lagrangian-Eulerian — 세 관점의 절충</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 두 고전적 관점의 한계
+
+**Eulerian (오일러, 유체역학 기본)**
+- 격자가 공간에 **고정**, 유체가 격자를 통과
+- 유체 해석에 적합하지만 경계면이 움직이면 **격자가 경계를 추적 불가**
+
+**Lagrangian (라그랑주, 고체역학 기본)**
+- 격자가 물질과 **함께 이동**
+- 고체 변형 추적에 적합하지만 유체에 적용하면 **격자가 심하게 뒤틀림(Tangling)**
+
+<div class="mt-3 p-3 bg-blue-900/20 rounded border border-blue-500/30">
+
+💡 **ALE = 두 관점의 절충**
+경계면(막)에서는 격자가 고체와 함께 이동하고 (Lagrangian), 유체 내부에서는 격자가 꼬이지 않도록 독립적으로 재배치됩니다 (Eulerian).
+
+</div>
+
+</div>
+
+<div v-click>
+
+### 🔹 ALE가 가능하게 하는 것
+
+**막 변위가 있는 경우 시뮬레이션 흐름:**
+```
+t=0: 평평한 막 → 유체 메시 정렬
+         ↓
+t=Δt: 압력 → 막 변형 (Poisson)
+         ↓
+      메시 전체 재배치 (ALE)
+         ↓
+t=2Δt: 변형된 형상 위에서 NS 풀기
+         ↓
+      반복...
+```
+
+ALE 없이는 **막이 변형되어도 유체 메시는 t=0 형상 그대로** 계산하게 되어, 물리적으로 완전히 틀린 결과가 나옵니다.
+
+</div>
+</div>
+
+---
+theme: seriph
+class: text-center
+highlighter: shiki
+---
+
+# 6-2. ALE 수식 구성
+<div class="text-xl opacity-80 mb-6">움직이는 메시 위의 나비에-스토크스와 조화 확장</div>
+
+<div grid="~ cols-2 gap-8" class="text-left text-sm">
+
+<div v-click>
+
+### 🔹 ALE 나비에-스토크스
+격자가 $w_{mesh}$의 속도로 움직이므로, 유체가 느끼는 **상대적 대류 속도**가 달라집니다:
 
 **기존 대류항:**
-$$\rho (u \cdot \nabla u)$$
-**ALE 대류항 (메쉬 속도 $w_{mesh}$ 반영):**
-$$\rho ((u - w_{mesh}) \cdot \nabla u)$$
+$$\rho(u\cdot\nabla u)$$
 
-- $u$: 유체의 실제 속도
-- $w_{mesh}$: 격자(Mesh)가 이동하는 속도
-- $(u - w_{mesh})$: 움직이는 격자 위에서 유체가 움직이는 상대 속도
+**ALE 대류항 (메시 속도 반영):**
+$$\rho\underbrace{(u - w_{mesh})}_{\text{상대 속도}}\cdot\nabla u$$
 
-### 3. 메쉬 변위의 조화 확장 (Harmonic Extension)
-경계면(막)이 움직일 때, 내부 유체 격자들이 서로 겹치거나 꼬이지 않도록 변위($d$)를 공간 전체로 부드럽게 퍼뜨려야 합니다. 이를 위해 공간 전체에 대해 라플라스 방정식(Laplace's equation)을 풉니다.
+전체 ALE-NS 약형:
+$$\int_\Omega \rho\frac{u^*-u^n}{\Delta t}\cdot v + \int_\Omega \rho(u^n - w_{mesh})\cdot\nabla u^n\cdot v + \int_\Omega \sigma:\epsilon(v) + \int_{\Gamma_m}\frac{\mu}{\kappa}\,\text{avg}(u)\cdot n\;\text{avg}(v)\cdot n\;dS = 0$$
 
-$$-\nabla \cdot (k \nabla d) = 0$$
-- $d$: 메쉬의 변위 (Mesh displacement)
-- $k$: 메쉬 강성 (Mesh stiffness). 막에 가까울수록 크게 설정하여 좁은 격자의 찌그러짐을 방지합니다.
+</div>
 
-### 4. FEniCSx 코드 구현
-ALE 기법은 유체 운동량 방정식의 대류항 수정과, 메쉬 변위를 구하는 Poisson 방정식 두 가지로 구현됩니다.
+<div v-click>
 
-```python
-# 1. ALE 대류항 적용 (u_n - w_msh)
-F1 = rho_v / dt * inner(u_t - u_n, vf) * dxf \
-   + rho_v * inner(dot(u_n - w_msh, nabla_grad(u_n)), vf) * dxf \
-   + inner(sig_(U, p_n), eps_(vf)) * dxf
+### 🔹 조화 확장 (Harmonic Extension)
+막이 변위 $w$만큼 움직이면, 내부 격자들이 겹치지 않도록 변위를 **라플라스 방정식**으로 부드럽게 전파합니다:
 
-# 2. 메쉬 꼬임 방지를 위한 가변 강성(Variable Stiffness) 조화 확장
-dist_to_mem = abs(x_f[0] - x_m)
-mesh_stiffness = 1.0 / (dist_to_mem + 0.05)**2 
+$$-\nabla\cdot(k\nabla d) = 0 \quad \text{in } \Omega_f$$
+$$d = \Delta w\,\hat{e}_x \quad \text{on } \Gamma_m$$
+$$d = 0 \quad \text{on } \partial\Omega_f$$
 
-a_ale_ufl = form(mesh_stiffness * inner(nabla_grad(d_t3), nabla_grad(e3)) * dxf)
-L_ale_ufl = form(inner(Constant(msh, PETSc.ScalarType((0., 0., 0.))), e3) * dxf)
+- $d$: 메시 변위
+- $k$: 가변 강성 — 막에 가까울수록 크게 설정하여 격자 뒤틀림 방지:
+
+$$k = \frac{1}{(|x - x_m| + \delta)^2}$$
+
+### 🔹 전체 결합 구조 (매 타임스텝)
+
+$$\underbrace{\text{ALE-NS}}_{\text{유체}} \xrightarrow{p^+, p^-} \underbrace{-T\Delta_\Gamma w = [\![p]\!]}_{\text{막 Poisson}} \xrightarrow{\Delta w} \underbrace{-\nabla\cdot(k\nabla d)=0}_{\text{조화 확장}} \xrightarrow{x \mathrel{+}= d} \text{반복}$$
+
+</div>
+</div>
