@@ -1625,7 +1625,7 @@ highlighter: shiki
 <div class="w-full flex flex-col items-center mt-2">
   
   <video controls autoplay loop muted width="100%" class="rounded shadow-lg">
-    <source src="./video/velocity-profile.mp4.mp4" type="video/mp4">
+    <source src="./video/velocity-profile.mp4" type="video/mp4">
   </video>
   <div class="text-xs opacity-70 mt-1">
     원기둥 속도 분포
