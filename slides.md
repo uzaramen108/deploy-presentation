@@ -260,7 +260,7 @@ class: text-center
 highlighter: shiki
 ---
 
-# 2-3. 약형 도출
+# 2-1. 약형 도출
 
 
 <div grid="~ cols-2 gap-8" class="text-left text-sm">
@@ -305,7 +305,7 @@ class: text-center
 highlighter: shiki
 ---
 
-# 2-3. 약형 적용 및 차수 할당
+# 2-2. 약형 적용 및 차수 할당
 
 <br>
 
@@ -1010,9 +1010,9 @@ ALE + Darcy 통합 코드
 ```python {all} twoslash
 """
 FSI: ALE Navier-Stokes + Poisson Membrane + Darcy Permeation
-수정사항:
+특이사항:
   1. NS 행렬 A1,A2,A3 매 스텝 재조립
-  2. sub_m.geometry.x를 msh와 매 스텝 동기화
+  2. sub_m.geometry.x를 msh와 매 스텝 동기화(막 메쉬 매번 업뎃한다는 뜻)
   3. pressure_jump를 현재 막 위치 기반 동적 샘플링으로 수정
 """
 
@@ -1045,10 +1045,10 @@ from ufl import (
 # § 0. Parameters
 # ═══════════════════════════════════════════════════════════════
 L, R, x_m  = 5.0, 0.5, 3.75
-T_sim, N   = 2.0, 2000
+T_sim, N   = 2.0, 2000 # 2초 시뮬레이션, 2000 타임스텝 -> dt=1ms
 dt         = T_sim / N
 
-rho_v      = 1.0
+rho_v      = 1.0 # 유체 밀도
 mu_v       = 0.01
 kappa_v    = 5e-3
 T_mem      = 25.0
@@ -1062,82 +1062,82 @@ EPS_BASE   = 0.03
 
 # ═══════════════════════════════════════════════════════════════
 # § 1. Mesh
+#  - 3D 원통 메시 2개 + 2D 막 서브메시 생성
 # ═══════════════════════════════════════════════════════════════
 gmsh.initialize()
 gmsh.model.add("fsi")
 if MPI.COMM_WORLD.rank == 0:
-    c1 = gmsh.model.occ.addCylinder(0,   0, 0, x_m,     0, 0, R)
-    c2 = gmsh.model.occ.addCylinder(x_m, 0, 0, L - x_m, 0, 0, R)
-    dk = gmsh.model.occ.addDisk(x_m, 0, 0, R, R)
+    c1 = gmsh.model.occ.addCylinder(0,   0, 0, x_m,     0, 0, R) # 막이 초기 위치인 x=3.75 기준으로 왼쪽에 원통 생성
+    c2 = gmsh.model.occ.addCylinder(x_m, 0, 0, L - x_m, 0, 0, R) # 막이 초기 위치인 x=3.75 기준으로 오른쪽에 원통 생성
+    dk = gmsh.model.occ.addDisk(x_m, 0, 0, R, R) # 막 위치에 원판 추가 (초기 막 위치에서의 경계면)
     gmsh.model.occ.rotate([(2, dk)], x_m, 0, 0, 0, 1, 0, np.pi / 2)
     out_tags, out_map = gmsh.model.occ.fragment(
-        [(3, c1), (3, c2)], [(2, dk)]
-    )
-    gmsh.model.occ.synchronize()
+        #-> fragment를 통해 원통 2개와 원판 1개를 겹쳐서 3D 영역과 2D 경계면으로 분할. 
+        # out_tags: (dim, tag) 리스트, out_map: dim별로 tag 리스트
+        [(3, c1), (3, c2)], [(2, dk)] )
+    gmsh.model.occ.synchronize() # -> OCC 모델링 후 gmsh.model.occ.synchronize() 호출하여 내부 데이터 구조 업데이트
 
-    mem_surfs = [t for d, t in out_map[2] if d == 2]
-    vol_tags  = [t for d, t in out_tags   if d == 3]
+    mem_surfs = [t for d, t in out_map[2] if d == 2] # dim이 2인 태그 중에서 막 경계면 태그만 추출
+    vol_tags  = [t for d, t in out_tags   if d == 3] # dim이 3인 태그 중에서 3D 영역 태그만 추출
     bnd       = gmsh.model.getBoundary(
         [(3, t) for t in vol_tags], oriented=False, combined=True
-    )
+    ) # 3D 영역 태그를 입력으로 getBoundary 호출하여 경계면 태그와 유형(경계면이 속한 3D 영역과의 관계)을 반환. combined=True로 중복 제거
     In, Out, Wall = [], [], []
     for d, tag in bnd:
-        if d != 2 or tag in mem_surfs: continue
-        cx = gmsh.model.occ.getCenterOfMass(d, tag)[0]
-        if   np.isclose(cx, 0., atol=.15): In.append(tag)
-        elif np.isclose(cx, L,  atol=.15): Out.append(tag)
-        else:                               Wall.append(tag)
+        if d != 2 or tag in mem_surfs: continue # dim이 2가 아니거나 막 경계면 태그인 경우 = 벽 경계면이 아닌 경우 for 루프에서 제외
+        cx = gmsh.model.occ.getCenterOfMass(d, tag)[0] # 경계면의 중심 좌표 계산 (x 좌표)
+        if   np.isclose(cx, 0., atol=.15): In.append(tag) # x=0에 가까운 경계면은 유입구로 분류하여 In 리스트에 추가
+        elif np.isclose(cx, L,  atol=.15): Out.append(tag) # x=L에 가까운 경계면은 유출구로 분류하여 Out 리스트에 추가
+        else:                               Wall.append(tag) # 나머지 경계면은 벽으로 분류하여 Wall 리스트에 추가
 
-    gmsh.model.addPhysicalGroup(3, vol_tags,  tag=1, name="fluid")
-    gmsh.model.addPhysicalGroup(2, In,        tag=1, name="inlet")
+    gmsh.model.addPhysicalGroup(3, vol_tags,  tag=1, name="fluid") # 3D 영역에 "fluid"라는 이름의 물리 그룹 추가
+    gmsh.model.addPhysicalGroup(2, In,        tag=1, name="inlet") 
     gmsh.model.addPhysicalGroup(2, Out,       tag=2, name="outlet")
     gmsh.model.addPhysicalGroup(2, Wall,      tag=3, name="wall")
     gmsh.model.addPhysicalGroup(2, mem_surfs, tag=4, name="membrane")
 
     gmsh.option.setNumber("Mesh.MeshSizeMax", 0.12)
-    gmsh.option.setNumber("Mesh.MeshSizeMin", 0.025)
+    gmsh.option.setNumber("Mesh.MeshSizeMin", 0.05) # 막 주변은 더 세밀하게 메싱. 너무 세밀하게 하면 시간 오래 걸립니다..
     gmsh.option.setNumber("Mesh.Algorithm3D", 4)
-    gmsh.model.mesh.generate(3)
+    gmsh.model.mesh.generate(3) # 3D 메시 생성
     gmsh.model.mesh.optimize("Netgen")
 
 gdata       = io.gmsh.model_to_mesh(gmsh.model, MPI.COMM_WORLD, 0, gdim=3)
 msh, ct, ft = gdata.mesh, gdata.cell_tags, gdata.facet_tags
 gmsh.finalize()
 
-gdim = msh.geometry.dim
+gdim = msh.geometry.dim # 3D 메시이므로 gdim=3
 
 # ═══════════════════════════════════════════════════════════════
 # § 2. Membrane 2D submesh
 #   vmap_m: sub_m geometry node → msh geometry node  (FIX 2)
 # ═══════════════════════════════════════════════════════════════
-# 🌟 FIX: 4번째 반환값인 geom_map을 받고, numpy 정수형 배열로 명시적 변환
-sub_m, emap_m, vmap_m, geom_map_raw = create_submesh(
-    msh, msh.topology.dim - 1, ft.find(4)
+# 4번째 반환값인 geom_map을 받고, numpy 정수형 배열로 명시적 변환
+sub_m, emap_m, vmap_m, geom_map_raw = create_submesh( # msh의 함수로 sub_m 생성. 
+    # geom_map_raw는 sub_m geometry 노드가 msh geometry 노드 중 어디에 대응되는지를 나타내는 매핑 정보.
+    msh, msh.topology.dim - 1, ft.find(4) 
 )
-geom_map = np.array(geom_map_raw, dtype=np.int32)
-# vmap_m[i] = index in msh.geometry.x corresponding to sub_m node i
-# → 매 스텝 sub_m.geometry.x[i] = msh.geometry.x[vmap_m[i]]
-
+geom_map = np.array(geom_map_raw, dtype=np.int32) # sub_m을 행렬 형식으로 변환.
 # ═══════════════════════════════════════════════════════════════
 # § 3. Function spaces
 # ═══════════════════════════════════════════════════════════════
-V_f   = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   2, shape=(gdim,)))
-Q_f   = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   1))
-V_ale = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   1, shape=(gdim,)))
-W_m   = functionspace(sub_m, ("Lagrange", 1))
+V_f   = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   2, shape=(gdim,))) # 유체 속도 공간: 2차 벡터 요소
+Q_f   = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   1)) # 유체 압력 공간: 1차 스칼라 요소
+V_ale = functionspace(msh,   belem("Lagrange", msh.basix_cell(),   1, shape=(gdim,)))  # ALE 메시 변위 공간: 1차 벡터 요소
+W_m   = functionspace(sub_m, ("Lagrange", 1)) # 막 변위 공간: 1차 스칼라 요소 (sub_m은 2D 막 서브메시)
 
 # ═══════════════════════════════════════════════════════════════
 # § 4. Integration measures
 # ═══════════════════════════════════════════════════════════════
 dxf  = Measure("dx", domain=msh,   subdomain_data=ct)
-dS_m = Measure("dS", domain=msh,   subdomain_data=ft, subdomain_id=4)
-dxm  = Measure("dx", domain=sub_m)
+dS_m = Measure("dS", domain=msh,   subdomain_data=ft, subdomain_id=4) # 막 경계면에서의 표면 적분 (dS) 정의. 
+dxm  = Measure("dx", domain=sub_m) # 막의 약형식에서는 sub_m의 체적 적분(dx)을 사용.
 n    = FacetNormal(msh)   # dS_m (interior) 에서 사용 → 합법
 
 # ═══════════════════════════════════════════════════════════════
 # § 5. Boundary conditions
 # ═══════════════════════════════════════════════════════════════
-fdim = msh.topology.dim - 1
+fdim = msh.topology.dim - 1 # 2D 경계면에서의 위상 차원, fdim=2
 
 class InletVelocity:
     def __init__(self): self.t = 0.0
@@ -1146,7 +1146,8 @@ class InletVelocity:
         r2   = x[1]**2 + x[2]**2
         v[0] = (u_max
                 * np.sin(np.pi * self.t / (T_sim * 2))
-                * np.maximum(1 - r2 / R**2, 0.))
+                * np.maximum(1 - r2 / R**2, 0.)) 
+        # 입력 속도는 sin 함수로 시간에 따라 변화하며, 반경 방향으로는 포물면.
         return v
 
 iv   = InletVelocity()
@@ -1184,14 +1185,14 @@ bc_ale_fixed = dirichletbc(
 def eps_(u): return sym(nabla_grad(u))
 def sig_(u, p): return 2 * mu_v * eps_(u) - p * Identity(gdim)
 
-u_t, vf  = TrialFunction(V_f),  TestFunction(V_f)
-p_t, qf  = TrialFunction(Q_f),  TestFunction(Q_f)
-u_n, p_n = Function(V_f), Function(Q_f)
-u_,  p_  = Function(V_f), Function(Q_f)
+u_t, vf  = TrialFunction(V_f),  TestFunction(V_f) # u_t: NS Step 1에서 구할 중간 속도, vf: NS Step 1의 테스트 함수
+p_t, qf  = TrialFunction(Q_f),  TestFunction(Q_f) # p_t: NS Step 2에서 구할 압력, qf: NS Step 2의 테스트 함수
+u_n, p_n = Function(V_f), Function(Q_f) # 이전 속도/압력
+u_,  p_  = Function(V_f), Function(Q_f) # 최종 속도/압력
 u_.name, p_.name = "Velocity", "Pressure"
 
-w_msh = Function(V_f)          # ALE mesh velocity
-U     = 0.5 * (u_n + u_t)     # Crank-Nicolson
+w_msh = Function(V_f)          # ALE mesh velocity, 상대적 대류속도 계산용
+U     = 0.5 * (u_n + u_t)     # Crank-Nicolson, 미분항을 선형항으로.
 
 # NS Step 1: momentum + Darcy surface resistance
 F1 = (
@@ -1200,6 +1201,7 @@ F1 = (
   + inner(sig_(U, p_n), eps_(vf)) * dxf
   + DK * dot(avg(U), n("+")) * dot(avg(vf), n("+")) * dS_m
 )
+# 전체 ALE-NS + Darcy 저항 항을 포함하는 NS Step 1의 약형식 F1 정의. 7번 슬라이드와 동일.
 a1_ufl = form(lhs(F1))
 L1_ufl = form(rhs(F1))
 
@@ -1207,13 +1209,15 @@ L1_ufl = form(rhs(F1))
 a2_ufl = form(dot(nabla_grad(p_t), nabla_grad(qf)) * dxf)
 L2_ufl = form(dot(nabla_grad(p_n), nabla_grad(qf)) * dxf
             - rho_v / dt * div(u_) * qf * dxf)
+# 2번 슬라이드의 2. 약형 변환과 동일한 식.
 
 # NS Step 3: velocity correction
 a3_ufl = form(rho_v * dot(u_t, vf) * dxf)
 L3_ufl = form(rho_v * dot(u_, vf) * dxf
             - dt * dot(nabla_grad(p_ - p_n), vf) * dxf)
+# 2번 슬라이드의 속도 보정 수식 약형 변환과 동일한 식.
 
-# Membrane Poisson: -T Δ_Γ w = [[p]]
+# Membrane Poisson: -T Δ_Γ w = [[p]], 반력은 압력차에 의해 나타남
 w_t2, vm = TrialFunction(W_m), TestFunction(W_m)
 w_,  w_pr = Function(W_m), Function(W_m)
 w_.name   = "Deflection"
@@ -1237,6 +1241,7 @@ L_ale_ufl = form(inner(Constant(msh, PETSc.ScalarType((0., 0., 0.))), e3) * dxf)
 
 # ═══════════════════════════════════════════════════════════════
 # § 7. KSP factory
+#  - 매 스텝 NS 행렬 재조립 → KSP에 행렬 갱신 전달 필요 (setOperators)
 # ═══════════════════════════════════════════════════════════════
 PETSc.Options()["ksp_error_if_not_converged"] = False
 
@@ -1272,124 +1277,86 @@ valid_ag        = dist_ag < 1e-8                    # ale DOF → geo node
 mem_ale_dofs = locate_dofs_topological(V_ale, fdim, ft.find(4))
 
 # ═══════════════════════════════════════════════════════════════
-# § 9. Dynamic pressure jump  (FIX 3)
+# § 9. Dynamic pressure jump
 #
-#   기존: 고정 x_m ± ε  → 막이 ε 이상 변위 시 같은 쪽 샘플링
-#   수정: 현재 막 DOF 좌표(변위 반영) 기준으로 샘플링
-#         EPS = EPS_BASE  (고정) → 막 변위가 EPS보다 작도록
-#         dt 조정 또는 EPS를 max_deflection 기반으로 동적 설정
+#   법선벡터 계산과 샘플링을 완전 벡터화하여 효율성 극대화
 # ═══════════════════════════════════════════════════════════════-
 def pressure_jump_dynamic(p_fn, w_arr, mem_dof_coords_init,
                            gtree_current, eps=EPS_BASE):
-    """
-    변형된 막의 법선 방향으로 압력 샘플링.
-    
-    법선 벡터 유도:
-      막 표면: (x_m + w(r), y, z)
-      T_y = (dw/dr * y/r, 1, 0)
-      T_z = (dw/dr * z/r, 0, 1)
-      n   = T_y × T_z = (1, -dw/dr*y/r, -dw/dr*z/r) / |n|
-    """
     n_pts    = len(mem_dof_coords_init)
-    p_minus  = np.zeros(n_pts)
-    p_plus   = np.zeros(n_pts)
-
     current_x = mem_dof_coords_init[:, 0] + w_arr
     y_c       = mem_dof_coords_init[:, 1]
     z_c       = mem_dof_coords_init[:, 2]
-    r_c       = np.sqrt(y_c**2 + z_c**2)
 
     max_w   = np.max(np.abs(w_arr)) if w_arr.size > 0 else 0.
     eps_dyn = max(eps, max_w * 1.5 + 1e-4)
 
-    # ── 법선 벡터 계산: dw/dr 수치 근사 ──────────────────────
-    # 각 DOF에서 반경 방향 이웃 DOF를 찾아 유한차분
-    dw_dr = np.zeros(n_pts)
-    search_radius = 3.0 * mem_lc   # 이웃 탐색 반경
+    # ── 법선 벡터 계산 완전 벡터화 ───────────────────────────
+    yz_coords = np.column_stack([y_c, z_c])
+    tree_mem  = cKDTree(yz_coords)
+    all_nbrs  = tree_mem.query_ball_point(yz_coords, r=3.0*mem_lc)
 
-    for i in range(n_pts):
-        ri = r_c[i]
-        if ri < 1e-10:
-            # 중심점: 축대칭이므로 dw/dr = 0
-            dw_dr[i] = 0.0
-            continue
+    dw_dy = np.zeros(n_pts)
+    dw_dz = np.zeros(n_pts)
 
-        dr_all = np.abs(r_c - ri)
-        dr_all[i] = np.inf   # 자기 자신 제외
-        nbrs = np.where(dr_all < search_radius)[0]
+    for i, raw in enumerate(all_nbrs):
+        nbrs = np.array([j for j in raw if j != i])
+        if len(nbrs) == 0: continue
 
-        if len(nbrs) == 0:
-            dw_dr[i] = 0.0
-            continue
+        dy = y_c[nbrs] - y_c[i]
+        dz = z_c[nbrs] - z_c[i]
+        dw = w_arr[nbrs] - w_arr[i]
 
-        # 반경 차이로 가중 유한차분
-        dr_vals = r_c[nbrs] - ri
-        dw_vals = w_arr[nbrs] - w_arr[i]
-        valid   = np.abs(dr_vals) > 1e-12
-        if valid.any():
-            # 거리 역가중 평균
-            weights      = 1.0 / (np.abs(dr_vals[valid]) + 1e-14)
-            dw_dr[i]     = np.sum(weights * dw_vals[valid] / dr_vals[valid]) \
-                           / np.sum(weights)
+        # 2x2 최소자승 (행렬 없이 직접 계산), 주변 점으로 법선벡터 계산
+        syy = dy @ dy; szz = dz @ dz; syz = dy @ dz
+        syw = dy @ dw; szw = dz @ dw
+        det = syy*szz - syz*syz
 
-    # 법선 벡터 (x, y, z 성분)
-    # n = (1, -dw/dr * y/r, -dw/dr * z/r) / |n|
-    safe_r = np.where(r_c > 1e-10, r_c, 1.0)   # 0 나누기 방지
+        if abs(det) > 1e-20:
+            dw_dy[i] = (szz*syw - syz*szw) / det
+            dw_dz[i] = (syy*szw - syz*syw) / det
 
-    nx = np.ones(n_pts)
-    ny = np.where(r_c > 1e-10, -dw_dr * y_c / safe_r, 0.0)
-    nz = np.where(r_c > 1e-10, -dw_dr * z_c / safe_r, 0.0)
+    nx = np.ones(n_pts); ny = -dw_dy; nz = -dw_dz
+    mag = np.maximum(np.sqrt(nx**2 + ny**2 + nz**2), 1e-14)
+    nx /= mag; ny /= mag; nz /= mag # 단위벡터(크기 1)로 정규화
 
-    n_mag = np.sqrt(nx**2 + ny**2 + nz**2)
-    nx /= n_mag;  ny /= n_mag;  nz /= n_mag
+    # ── 샘플링 벡터화 ────────────────────────────────────────
+    p_minus = np.zeros(n_pts)
+    p_plus  = np.zeros(n_pts)
 
-    # ── 법선 방향으로 샘플링 포인트 생성 ─────────────────────
     for sign, arr in [(-1, p_minus), (+1, p_plus)]:
         pts = np.column_stack([
-            current_x + sign * eps_dyn * nx,   # x: 변위 + 법선 x성분
-            y_c       + sign * eps_dyn * ny,   # y: 법선 y성분
-            z_c       + sign * eps_dyn * nz,   # z: 법선 z성분
-        ])
+            current_x + sign*eps_dyn*nx,
+            y_c       + sign*eps_dyn*ny,
+            z_c       + sign*eps_dyn*nz,
+        ]) # 각 DOF에서 법선 방향으로 eps_dyn만큼 떨어진 샘플링 점 좌표 (n_pts, 3)
+        r = np.sqrt(pts[:,1]**2 + pts[:,2]**2)
+        out = r > R*0.92
+        pts[out,1] *= R*0.92/r[out]
+        pts[out,2] *= R*0.92/r[out]
+        pts[:,0] = np.clip(pts[:,0], 0.01, L-0.01)
 
-        # 반경 방향 clamp (파이프 내부 유지)
-        r   = np.sqrt(pts[:, 1]**2 + pts[:, 2]**2)
-        out = r > R * 0.92
-        pts[out, 1] *= R * 0.92 / r[out]
-        pts[out, 2] *= R * 0.92 / r[out]
-        pts[:, 0]   = np.clip(pts[:, 0], 0.01, L - 0.01)
+        coll  = compute_collisions_points(gtree_current, pts)
+        col_c = compute_colliding_cells(msh, coll, pts)
 
-        coll            = compute_collisions_points(gtree_current, pts)
-        colliding_cells = compute_colliding_cells(msh, coll, pts)
-
-        cells = np.full(n_pts, -1, dtype=np.int32)
-        found = np.zeros(n_pts, dtype=np.float64)
-
-        for i in range(n_pts):
-            links = colliding_cells.links(i)
-            if len(links) > 0:
-                cells[i] = links[0]
-                found[i] = 1.0
+        # links를 한 번에 처리
+        cells = np.array([
+            col_c.links(i)[0] if len(col_c.links(i)) > 0 else -1
+            for i in range(n_pts)], dtype=np.int32)
+        found = (cells >= 0).astype(np.float64)
 
         ok = cells >= 0
         if ok.any():
-            pts_ok = pts[ok].reshape(-1, 3)
-            vals   = p_fn.eval(pts_ok, cells[ok])
-            arr[ok] = vals.reshape(-1)
+            arr[ok] = p_fn.eval(
+                pts[ok].reshape(-1,3), cells[ok]).reshape(-1)
 
-    # ── MPI reduction ─────────────────────────────────────────
-    found_global   = np.zeros(n_pts, dtype=np.float64)
-    p_minus_global = np.zeros_like(p_minus)
-    p_plus_global  = np.zeros_like(p_plus)
-
-    msh.comm.Allreduce(found,   found_global,   op=MPI.SUM)
-    msh.comm.Allreduce(p_minus, p_minus_global, op=MPI.SUM)
-    msh.comm.Allreduce(p_plus,  p_plus_global,  op=MPI.SUM)
-
-    denom = np.maximum(found_global, 1.0)
-    p_minus_global /= denom
-    p_plus_global  /= denom
-
-    return p_minus_global - p_plus_global
+    # MPI
+    fg = np.zeros(n_pts); pm = np.zeros(n_pts); pp = np.zeros(n_pts)
+    msh.comm.Allreduce(found,   fg, op=MPI.SUM)
+    msh.comm.Allreduce(p_minus, pm, op=MPI.SUM)
+    msh.comm.Allreduce(p_plus,  pp, op=MPI.SUM)
+    d = np.maximum(fg, 1.0)
+    return pm/d - pp/d
 
 # ═══════════════════════════════════════════════════════════════
 # § 10. One-step solve helper
@@ -1420,7 +1387,6 @@ for fn in [u_, u_n, p_, p_n, w_, w_pr, d_ale, w_msh]:
 
 # ═══════════════════════════════════════════════════════════════
 # § 12. Time loop
-# 🌟 메모리 누수 방지: 루프 외부에서 빈 껍데기 객체 1회 생성
 # ═══════════════════════════════════════════════════════════════
 A1 = create_matrix(a1_ufl)
 A2 = create_matrix(a2_ufl)
@@ -1500,7 +1466,7 @@ for step in range(N):
     ksp_solve(s_a, b_a, d_ale, L_ale_ufl, a_ale_ufl, bcs_ale)
 
     # ════════════════════════════════════════════════════════
-    # FIX 2: msh + sub_m 동기화 (증분 업데이트)
+    #   msh + sub_m 동기화 (메시 이동 후 신규 좌표로 업데이트)
     #   d_ale: (N_ale_dofs, 3) 증분 변위
     #   msh.geometry.x: (N_geo, 3)
     #   sub_m.geometry.x[i] = msh.geometry.x[vmap_m[i]]
@@ -1521,7 +1487,9 @@ for step in range(N):
     w_msh.x.array[:] /= dt
 
     # ── 7. bb_tree 갱신 (메시 이동 후 필수) ─────────────────
-    gtree = bb_tree(msh, msh.topology.dim)
+    # bb_tree는 메시가 크게 변할 때만 갱신
+    if step % 5 == 0:   # 매 스텝 말고 5스텝마다
+        gtree = bb_tree(msh, msh.topology.dim)
 
     # ── 8. Store w for next increment ───────────────────────
     w_pr.x.array[:] = w_.x.array[:]
@@ -1542,6 +1510,8 @@ for step in range(N):
               f"max_d={np.max(np.abs(d_ale.x.array)):.3e}")
 
 vtx_u.close(); vtx_p.close(); vtx_w.close(); vtx_d.close()
+
+
 
 
 ```
