@@ -1,4 +1,5 @@
 ---
+colorSchema: light
 theme: seriph
 background: ./images/white_background.png
 title: 인구증가율 데이터분석
