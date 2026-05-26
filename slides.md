@@ -462,8 +462,8 @@ plt.show()
 <div class="text-[13px] space-y-4">
 
 ### 다변량 병합 분석
-- **코드 포인트**: `melt()` 함수를 통한 와이드 폼의 구조적 롱 폼 전환, `pd.merge()`를 통한 지역 및 연도 기준 공통 키 병합, `sns.regplot()` 기반 선형 회귀선 자동 도출
-- **분석 결과**: 여러 연도 및 지역 데이터를 일원화하여 거시적 트렌드 도출, 피어슨 상관계수($r$) 측정을 통한 두 변수 간 선형 연관성 세기 정량화
+- **코드 포인트**: `melt()` 함수를 통한 와이드 폼의 구조적 롱 폼 전환, `pd.merge()`를 통한 지역 및 연도 기준 공통 키 병합, `sns.regplot()` 기반 선형 회귀선 자동 도출.
+- **분석 결과**: `r = -0.32`로 인구증가율과 보육시설 수는 뚜렷한 선형관계가 없음을 보임.
 
 <button @click="isExpanded = true" class="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
   <carbon:zoom-in /> 분석 결과 크게 보기
@@ -560,7 +560,7 @@ plt.show()
 
 ### 시간적 변화 분석
 - **코드 포인트**: 최근 6개년 데이터를 $2 \times 3$ 서브플롯 그리드로 동시 분할 구현, `sharex`/`sharey` 축 공유 설정을 통해 일관된 스케일 비교, 매 스텝 상관계수를 타이틀에 맵핑
-- **분석 의의**: 변수 간 관계 지표가 고정되지 않고 시간에 따라 변동하는 추세 모니터링, 특정 시점의 정책 변화 효과 추적 및 시간적 편차 확인
+- **분석 결과**: 변수 간 관계 지표가 고정되지 않고 시간에 따라 변동하는 추세 모니터링. 미미하지만 시간이 지날수록 r이 증가.
 
 <button @click="isExpanded = true" class="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
   <carbon:zoom-in /> 분석 결과 크게 보기
@@ -699,7 +699,7 @@ plt.show()
 
 ### PCA Biplot 해석
 - **코드 포인트**: 변수 스케일 왜곡 방지를 위한 `StandardScaler` 적용, `PCA(n_components=2)`를 통한 2차원 평면 차원 감소, 샘플 좌표와 로딩 방향 벡터를 동시 표현하는 Biplot 구현
-- **해석 가이드**: 빨간색 타겟 벡터(인구증가율)를 기준으로 사잇각이 좁은 변수(양의 상관), 정반대 방향 변수(음의 상관) 관계 판별 및 주성분 분산 설명력 확인
+- **분석 결과**: 인구 증가율 벡터와 가까운 방향을 가지는 벡터(어린이집현원율, 주관적 소득)는 양의 상관관계를, 반대에 가까운 벡터(물가지수)는 음의 상관관계를 나타냄.
 
 <button @click="isExpanded = true" class="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
   <carbon:zoom-in /> 분석 결과 크게 보기
@@ -816,8 +816,9 @@ plt.show()
 <div class="text-[13px] space-y-4">
 
 ### 주성분 회귀 모델링 (PCR)
-- **코드 포인트**: 다중공선성 교란을 제거하기 위해 직교 변환 주성분 행렬 투입, `np.argmax()`를 사용하여 누적분산 임계치 80%를 만족하는 최소 주성분 차원 개수($k$) 자동 연산 및 적합
-- **결과 해석**: 실제 데이터 분포 대비 예측값 간의 선형 적합 잔차 검증, 결정계수($R^2$) 값을 통하여 독립 성분들이 타겟 지표의 분산을 설명하는 강도 평가
+- **차원 축소 및 최적화**: 2023년 데이터를 기준으로, 원본 분산의 80% 이상을 보존하는 주성분($k=4$)을 자동 추출하여 모델에 적용.
+- **설명력 평가 ($R^2 = 0.302$)**: 4개의 주성분이 인구증가율 분산의 약 30.2%를 설명.
+- **결과 해석**: 그래프의 파란 점들이 기준선(완벽한 예측을 의미하는 빨간 점선, $y=x$) 주변으로 다소 흩어져 분포합니다. 이는 모델이 전체적인 우상향 경향성은 어느 정도 파악하나, 해당 지표들 외에도 복합적인 요인이 얽혀 있음을 시각적으로 보여줍니다.
 
 <button @click="isExpanded = true" class="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
   <carbon:zoom-in /> 분석 결과 크게 보기
@@ -861,19 +862,19 @@ class: px-20 py-10
 <div class="grid grid-cols-2 gap-10 mt-6">
 
   <div class="bg-gray-50/5 p-8 rounded-xl border border-gray-200/60 shadow-sm flex flex-col">
-    <h3 class="text-xl font-bold text-blue-500 mb-6">주요 발견사항</h3>
+    <h3 class="text-xl font-bold text-blue-500 mb-6">분석 후 느낀점</h3>
     <ul class="list-none space-y-5 text-[11.5px] leading-relaxed opacity-90 m-0 p-0">
       <li class="flex gap-3">
         <span class="text-blue-400">🔹</span>
-        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">지역 간 양극화 심화</strong><br>수도권과 지방 간의 인구증가율 격차가 뚜렷하며, 서울의 지속적인 인구 유출과 비수도권의 편차가 크게 나타남.</div>
+        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">데이터분석 라이브러리</strong><br>Pandas와 Matplotlib을 통해 원하는 지역별 인구증가율 분석 등 사용자의 의도대로 커스텀하여 세밀한 분석이 가능했음.</div>
       </li>
       <li class="flex gap-3">
         <span class="text-blue-400">🔹</span>
-        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">핵심 영향 요인 검증</strong><br>보육 인프라, 주거 안정성, 삶의 만족도가 인구증가율과 가장 강한 상관성을 보임 (청년 고용률 및 소득 수준도 주요 변수로 작용).</div>
+        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">핵심 영향 요인 검증</strong><br>어떤 요인이 인구증가율과 밀접한 관계를 지니는지에 대해 객관적인 지표로 분석이 가능했음.</div>
       </li>
       <li class="flex gap-3">
         <span class="text-blue-400">🔹</span>
-        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">시간적 가변성 추적</strong><br>상관계수가 고정되지 않고 연도별로 변동하는 추세를 보이며, 이는 특정 시점의 정책 및 경제 흐름이 반영된 결과로 해석됨.</div>
+        <div><strong class="text-gray-800 dark:text-gray-200 text-[14.5px]">시간적 가변성 추적</strong><br>데이터 분석을 통해 시간에 따른 해당 지표의 상승 및 하락의 이유를 사회적 요인과 연관지을 수 있음.</div>
       </li>
     </ul>
   </div>
@@ -899,55 +900,16 @@ class: px-20 py-10
 </div>
 
 ---
-layout: default
-class: px-20 py-10
+layout: center
+class: text-center
 ---
 
-# 향후 연구 방향
-<div class="border-b-2 border-blue-500 w-20 mb-8"></div>
+# 🙏 감사합니다!
 
-<div class="grid grid-cols-3 gap-6 mt-8">
+<div class="mt-8 text-xl text-gray-600 dark:text-gray-300">
+  지금까지 <strong class="text-blue-500">인구증가율 데이터 분석</strong> 발표였습니다.
+</div>
 
-  <div class="bg-gray-50/5 p-7 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all flex flex-col">
-    <h3 class="text-[17px] font-bold text-blue-500 mb-4">더 정교한 예측 모델 설계</h3>
-    <ul class="list-none space-y-4 text-[13px] leading-relaxed opacity-90 m-0 p-0">
-      <li class="flex gap-2">
-        <span class="text-blue-400">✔️</span>
-        <div>비선형 패턴 탐색을 위한 머신러닝 <strong class="text-gray-700 dark:text-gray-300">(Random Forest, XGBoost)</strong> 적용</div>
-      </li>
-      <li class="flex gap-2">
-        <span class="text-blue-400">✔️</span>
-        <div>인구 시계열 데이터의 자기상관성을 반영한 구조적 예측 <strong class="text-gray-700 dark:text-gray-300">(ARIMA 연계)</strong></div>
-      </li>
-    </ul>
-  </div>
-
-  <div class="bg-gray-50/5 p-7 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all flex flex-col">
-    <h3 class="text-[17px] font-bold text-purple-500 mb-4">인과관계 및 데이터 확장</h3>
-    <ul class="list-none space-y-4 text-[13px] leading-relaxed opacity-90 m-0 p-0">
-      <li class="flex gap-2">
-        <span class="text-purple-400">✔️</span>
-        <div>단순 상관성을 넘어 기하학적 그래프 모델<strong class="text-gray-700 dark:text-gray-300">(DAG)</strong>을 활용한 심층 인과추론</div>
-      </li>
-      <li class="flex gap-2">
-        <span class="text-purple-400">✔️</span>
-        <div>정책 수립 효과성 검증을 위한 가상 시나리오 수립 및 시뮬레이션</div>
-      </li>
-    </ul>
-  </div>
-
-  <div class="bg-gray-50/5 p-7 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all flex flex-col">
-    <h3 class="text-[17px] font-bold text-teal-500 mb-4">공간 통계 방법론 결합</h3>
-    <ul class="list-none space-y-4 text-[13px] leading-relaxed opacity-90 m-0 p-0">
-      <li class="flex gap-2">
-        <span class="text-teal-400">✔️</span>
-        <div>지리적 인접성에 따른 공간적 자기상관성 및 종속성 통제</div>
-      </li>
-      <li class="flex gap-2">
-        <span class="text-teal-400">✔️</span>
-        <div>지역별 인구 이동 패턴을 반영한 공간 군집 모형 결합</div>
-      </li>
-    </ul>
-  </div>
-
+<div class="mt-12 text-sm text-gray-400">
+  Q&A / 자유롭게 질문해 주세요.
 </div>
