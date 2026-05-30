@@ -388,67 +388,43 @@ layout: default
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
 ```python {all|1-5|7-33|35-43|45-63|all}
-# 엑셀 읽기 (2줄 헤더)
-factor1 = pd.read_excel("보육시설.xlsx", engine="openpyxl", header=[0, 1])
+import seaborn as sns
 
-# 결측치 처리
-factor1.replace(['-', '--', '…'], np.nan, inplace=True)
+# 1. 전체 연도에 대해 인구증가율 vs 보육 데이터 수집
+data = []
 
-# 1. 행정구역 컬럼 추출
-region_col = [
-    col for col in factor1.columns
-    if ('행정구역' in str(col[0])) or ('시도' in str(col[0]))
-][0]
+for year in df_pivoted.columns.levels[0]:
+    if (year, '인구증가율') in df_pivoted.columns and (year, '보육') in df_pivoted.columns:
+        pop = df_pivoted[(year, '인구증가율')]
+        facility = df_pivoted[(year, '보육')]
 
-# 2. "유아 천명당 보육시설수" 열만 추출
-facility_cols = [
-    col for col in factor1.columns
-    if '유아 천명당 보육시설수' in str(col[1])
-]
+        for region, p, f in zip(df_pivoted.index, pop, facility):
+            if pd.notna(p) and pd.notna(f):
+                data.append({
+                    '지역': region,
+                    '연도': int(year),
+                    '인구증가율': p,
+                    '보육': f
+                })
 
-# 3. 필요한 열만 추출
-df_facility = factor1[[region_col] + facility_cols].copy()
+# 2. DataFrame 생성
+df_all = pd.DataFrame(data)
 
-# 4. 열 이름 단순화
-df_facility.columns = ['지역'] + [clean_year(col[0]) for col in facility_cols]
+# 3. 전체 상관계수 계산
+r = df_all['인구증가율'].corr(df_all['보육'])
 
-# 5. 숫자형 변환
-for col in df_facility.columns[1:]:
-    df_facility[col] = pd.to_numeric(df_facility[col], errors='coerce')
-
-# 6. 지역명 공백 제거
-df_facility['지역'] = df_facility['지역'].astype(str).str.strip()
-
-# 7. 확인
-df_facility.head(len(df_facility))
-
-# 가장 최신 연도 자동 선택
-year = df_facility.columns[-1]
-
-# 특정 연도 데이터 정렬, 전국 제외
-df_year = df_facility[df_facility['지역'] != '전국'][['지역', year]].copy()
-df_year = df_year.sort_values(year, ascending=False)
-
-# 전국 평균값 따로 추출
-national_avg = df_facility[df_facility['지역'] == '전국'][year].values[0]
-
-# 시각화
-plt.figure(figsize=(12, 6))
-plt.bar(df_year['지역'], df_year[year], color='steelblue')
-
-# 전국 평균선 추가
-plt.axhline(
-    y=national_avg,
-    color='red',
-    linestyle='--',
-    label=f'전국 평균 ({national_avg:.3f})'
+# 4. 시각화
+plt.figure(figsize=(8, 6))
+sns.regplot(
+    data=df_all,
+    x='인구증가율',
+    y='보육',
+    scatter_kws={'alpha': 0.7},
+    line_kws={'color': 'gray', 'linestyle': 'dashed'}
 )
 
-plt.title(f'{year}년 시도별 유아 천명당 보육시설수')
-plt.ylabel('유아 천명당 보육시설수')
-plt.xticks(rotation=45, ha='right')
-plt.legend()
-plt.grid(True, axis='y', linestyle=':', alpha=0.5)
+plt.title(f"인구증가율 vs 보육시설 (전체 연도 통합)\n피어슨 상관계수 r = {r:.2f}", fontsize=14)
+plt.grid(True)
 plt.tight_layout()
 plt.show()
 ```
@@ -736,7 +712,7 @@ const isExpanded = ref(false)
 layout: default
 ---
 
-# 🔴 7. 회귀분석 (PCR)
+# 7. 회귀분석 (PCR)
 <div class="text-xl opacity-80 mb-8">주성분 회귀 기반 다중공선성 제어 및 추정</div>
 
 <div class="grid grid-cols-3 gap-8">
