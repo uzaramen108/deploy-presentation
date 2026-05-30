@@ -236,7 +236,7 @@ $$\nabla^2 \phi = \frac{\rho}{\Delta t} \underbrace{\nabla \cdot u^*}_{\text{막
 
 > **결론**: 저항을 물리량 기반 계수와 얇은 `tanh` 분포로 집중시키면 압력 점프를 **간접적으로 재현**할 수 있습니다. 다만 $[\![p]\!] = (\mu/\kappa)(u \cdot n)$을 수학적으로 강제하는 Darcy 표면항과 달리, 정량적 정확도는 막 두께 $t_{half}$에 의존합니다.
 
----
+--- 
 
 ## 5. 물리적으로 근거 있는 해법 시도: Navier-Stokes + Darcy
 
