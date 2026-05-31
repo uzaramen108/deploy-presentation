@@ -438,7 +438,7 @@ plt.show()
 <div class="text-[13px] space-y-4">
 
 ### 다변량 병합 분석
-- **코드 포인트**: `melt()` 함수를 통한 와이드 폼의 구조적 롱 폼 전환, `pd.merge()`를 통한 지역 및 연도 기준 공통 키 병합, `sns.regplot()` 기반 선형 회귀선 자동 도출.
+- **코드 포인트**: `sns.regplot()`을 활용하여 산점도 위에 선형 회귀(Linear Regression) 선과 95% 신뢰구간을 자동으로 계산 및 시각화. `df_pivoted` 구조에서 연도별 '인구증가율'과 '보육' 데이터를 매칭한 뒤, 결측치(`pd.notna`)를 필터링하여 통합 롱포맷(Long-form) 데이터프레임으로 재구축.
 - **분석 결과**: `r = -0.32`로 인구증가율과 보육시설 수는 뚜렷한 선형관계가 없음을 보임.
 
 <button @click="isExpanded = true" class="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
