@@ -885,7 +885,3 @@ class: text-center
 <div class="mt-8 text-xl text-gray-600 dark:text-gray-300">
   지금까지 <strong class="text-blue-500">인구증가율 데이터 분석</strong> 발표였습니다.
 </div>
-
-<div class="mt-12 text-sm text-gray-400">
-  Q&A / 자유롭게 질문해 주세요.
-</div>
