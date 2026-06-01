@@ -101,7 +101,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-14|15-21|22-35|36-50|all}
+```python 
 # 라이브러리 세팅
 import platform 
 import matplotlib.pyplot as plt 
@@ -211,7 +211,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-10|11-21|22-29|all}
+```python
 # 가장 최신 연도 자동 선택
 year = df_pop.columns[-1]
 
@@ -299,7 +299,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-13|14-27|all}
+```python
 seoul = df_pop[df_pop['지역'] == '서울특별시'].iloc[0, 1:]
 jeonnam = df_pop[df_pop['지역'] == '전라남도'].iloc[0, 1:]
 
@@ -387,7 +387,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-5|7-33|35-43|45-63|all}
+```python
 import seaborn as sns
 
 # 1. 전체 연도에 대해 인구증가율 vs 보육 데이터 수집
@@ -485,7 +485,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-7|9-33|34-38|all}
+```python
 # 1. 최근 6년 추출
 recent_years = sorted(df_all['연도'].unique())[-6:]
 n_rows, n_cols = 2, 3
@@ -582,7 +582,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-sm">
 
-```python {all|1-18|19-32|33-50|51-70|71-80|all}
+```python
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
@@ -721,7 +721,7 @@ layout: default
 
 <div class="overflow-y-auto max-h-[360px] shadow-lg rounded-md border border-gray-200/20 text-[12px] leading-tight">
 
-```python {all|1-15|16-35|36-47|48-59|all}
+```python
 # 1. 독립변수와 종속변수 설정
 x_variables = [
     '보육',
